@@ -1,0 +1,101 @@
+import java.util.Arrays;
+import java.util.Random;
+
+public class GeneticAlgorithm {
+
+    // Parameters for the Genetic Algorithm
+    private static final int populationSize = 10;
+    private static final int numGenerations = 50;
+    private static final int numParentsMating = 4;
+    private static final int numGenes = 5;
+
+    //   creating object number generator
+    private static final Random random = new Random();
+
+    // Defines a fitness function that calculates the fitness of an individual.
+    // The fitness is based on the sum of squared differences of each gene value from 5, multiplied by -1.
+    private static double fitnessFunction(double[] individual) {
+        return -Arrays.stream(individual).map(x -> Math.pow(x - 5, 2)).sum();
+    }
+
+    // Defines a method to initialize a population of individuals.
+    // Each individual has n genes, and the values are initialized
+    // with random doubles between 0 and 10.
+    private static double[][] initializePopulation(int size, int n) {
+        double[][] population = new double[size][n];
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < n; j++) {
+                population[i][j] = random.nextDouble() * 10; // Random values between 0 and 10
+            }
+        }
+        return population;
+    }
+
+    // SelectionDefines a method for selection.
+    // It calculates the fitness values for all individuals in the population using the defined fitness function.
+    private static double[][] select(double[][] population, int numParents) {
+        double[][] parents = new double[numParents][];
+        double[] fitnessValues = Arrays.stream(population)
+                .mapToDouble(GeneticAlgorithm::fitnessFunction)
+                .toArray();
+
+        //Selects the top numParents individuals with the highest fitness values.
+        // It iteratively finds the index of the maximum fitness value, selects the corresponding individual as a parent,
+        // and marks the selected fitness value as Double.NEGATIVE_INFINITY to ensure it is not selected again.
+        for (int i = 0; i < numParents; i++) {
+            int maxIndex = 0;
+            for (int j = 0; j < fitnessValues.length; j++) {
+                if (fitnessValues[j] > fitnessValues[maxIndex]) {
+                    maxIndex = j;
+                }
+            }
+            parents[i] = population[maxIndex];
+            fitnessValues[maxIndex] = Double.NEGATIVE_INFINITY; // Mark as selected
+        }
+        return parents;
+    }
+
+    // Crossover
+    //Defines a method for crossover. It takes a certain number of parents and produces offspring through crossover.
+    // The crossover point is set to the middle of the genes.
+    private static double[][] crossover(double[][] parents, int offspringSize) {
+        double[][] offspring = new double[offspringSize][numGenes];
+        int crossoverPoint = numGenes / 2;
+        
+        for (int i = 0; i < offspringSize; i++) {
+            int parent1Index = i % parents.length;
+            int parent2Index = (i + 1) % parents.length;
+            System.arraycopy(parents[parent1Index], 0, offspring[i], 0, crossoverPoint);
+            System.arraycopy(parents[parent2Index], crossoverPoint, offspring[i], crossoverPoint, numGenes - crossoverPoint);
+        }
+        return offspring;
+    }
+
+    // Mutation
+    private static void mutate(double[][] offspringCrossover) {
+        for (double[] offspring : offspringCrossover) {
+            int mutationIndex = random.nextInt(numGenes);
+            offspring[mutationIndex] += random.nextDouble() * 2 - 1; // Random value between -1 and 1
+        }
+    }
+
+    public static void main(String[] args) {
+        double[][] population = initializePopulation(populationSize, numGenes);
+
+        for (int generation = 0; generation < numGenerations; generation++) {
+            double[][] parents = select(population, numParentsMating);
+            double[][] offspringCrossover = crossover(parents, populationSize - numParentsMating);
+            mutate(offspringCrossover);
+
+            System.arraycopy(parents, 0, population, 0, numParentsMating);
+            System.arraycopy(offspringCrossover, 0, population, numParentsMating, offspringCrossover.length);
+        }
+
+        // Finding the best solution
+        double[] bestIndividual = Arrays.stream(population)
+                .max((individual1, individual2) -> Double.compare(fitnessFunction(individual1), fitnessFunction(individual2)))
+                .orElse(null);
+
+        System.out.println("Best Individual: " + Arrays.toString(bestIndividual));
+    }
+}
